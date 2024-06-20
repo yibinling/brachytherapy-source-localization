@@ -1,13 +1,10 @@
 
 clearvars
-
 addpath('bin');
-
 ParamSetting;
 
 %% Make measurement - projection
 load Datatest.mat % Ground-truth image
-
 NoiseOn = 0;    
 
 
@@ -39,8 +36,6 @@ for i = 1:n
     bb_centers(i, 2) = -(BBs(i).cy - 256*2) * param.dy;
     bb_centers(i, 3) = (BBs(i).cz - 86*2) * param.dz;
 end
-
-
 tungsten_attenuation_coefficient = 0.4041 *10;  
 
 for i = 1:numel(BBs)
@@ -50,18 +45,16 @@ for i = 1:numel(BBs)
 end
 
 x1 = x0 + BBs_3D;
-
 projWithoutBB = CTprojection2(x0,param);
 proj = CTprojection2(x1,param);
 maxPixelvalue = max(max(projWithoutBB));
 
 save proj.mat proj 
-
 proj0 = proj(:, :, 1);
 figure;
 imshow(proj0, []);
 
-
+%Binarize projection image with threshold = maxPixelvalue of projWithoutBB
 bw =  imbinarize(proj0,maxPixelvalue);
 minSize = 15;
 bw= bwareaopen(bw,minSize);
@@ -79,12 +72,12 @@ for k = 1:length(stats)
     end
 end
 
+% Fill any gaps in circular objects
 se = strel("disk",5);
 bw = imclose(bw,se);
 imshow(bw)
 
-
-
+% Display the label matrix and draw each boundary.
 [B,L] = bwboundaries(bw,"noholes");
 figure;
 imshow(label2rgb(L,@jet,[.5 .5 .5]))
@@ -94,6 +87,7 @@ for k = 1:length(B)
   plot(boundary(:,2),boundary(:,1),"r",LineWidth=2)
 end
 
+% Obtain circularity of each boundary. If the circularity exceeds the threshold, calculate the position of the centroid 
 centroids = [];
 stats2 = regionprops(L,"Circularity","Centroid");
 threshold = 0.7;
@@ -113,17 +107,14 @@ end
 title("Centroids of Circular Objects and Circularity Values")
 
 
-% 
+% Sort the centers from left to right
 centers = sortrows(centroids, 1);
-
-
 
 %Plot the projected projected BB location
 p = zeros(n, 3); 
 for i = 1:n
     p(i,:) = [param.DSD,250-centers(i,1)*param.du,250-centers(i,2)*param.dv];
 end
-
 
 % Define the 3D grid for the voxel space
 [x, y, z] = meshgrid(param.xs, param.ys, param.zs);
@@ -151,10 +142,7 @@ scatter3(source_location(1), source_location(2), source_location(3),100,'red','f
 trueSourceLabel = sprintf('Source: (%.2f, %.2f, %.2f)', source_location(1), source_location(2), source_location(3));
 text(source_location(1), source_location(2), source_location(3), trueSourceLabel, 'VerticalAlignment', 'bottom', 'HorizontalAlignment', 'right');
 
-
-
 hold on; 
-
 colors = ['m','b','y','g','c','r'];
 for i = 1:n  %Projected BBs
     scatter3(p(i,1), p(i,2), p(i,3), colors(i),'filled');
@@ -163,7 +151,6 @@ end
 %Plot the extensions from projected source location to the BB locations
 extension_length = 300;
 for i = 1:n %3D
-
     dx = p(i,1) - bb_centers(i,1);
     dy = p(i,2) - bb_centers(i,2);
     dz = p(i,3) - bb_centers(i,3);
@@ -197,7 +184,6 @@ disp(deviation_source);
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%calculating line-detector intersection%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 
 intersections = zeros(n, 3); 
 deviations = zeros(n, 1); 
@@ -250,7 +236,6 @@ text(source_location(1), source_location(2), source_location(3), ' Source', 'Ver
 
 scatter3(bb_centers(:,1), bb_centers(:,2), bb_centers(:,3), 'k', 'filled');
 
-
 for i = 1:n  %Projected BBs
     scatter3(p(i,1), p(i,2), p(i,3), colors(i),'filled');
 end
@@ -264,22 +249,9 @@ end
 % Plot the calculated intersection points on the detector plane
 scatter3(intersections(:,1), intersections(:,2), intersections(:,3), 'k', 'filled');
 
-
-
-
 grid on;
 axis equal;
 hold off;
-
-
-
-
-
-
-
-
-
-
 
 function optimal_point = findOptimalPoint(bb_centers, p, param) %3D
     n = size(bb_centers, 1); 
