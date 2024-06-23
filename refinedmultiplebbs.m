@@ -1,6 +1,5 @@
 
 clearvars
-addpath('bin');
 ParamSetting;
 
 %% Make measurement - projection
